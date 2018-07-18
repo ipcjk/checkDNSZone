@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"crypto/sha1"
 	"flag"
 	"fmt"
@@ -12,7 +13,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"context"
 )
 
 type dnsResult struct {
@@ -24,6 +24,12 @@ type dnsResult struct {
 /* poor globals */
 var nameServer string
 var nameServerProto string = "udp"
+var nagiosState = map[string]int{
+	"OK":       0,
+	"WARNING":  1,
+	"CRITICAL": 2,
+	"UNKNOWN":  3,
+}
 
 func main() {
 	var file io.ReadWriteCloser
@@ -36,7 +42,7 @@ func main() {
 	var r net.Resolver
 
 	hostFile := flag.String("hostfile", "hosts", "Zones to check")
-	flag.StringVar(&nameServer,"nameserver", "", "Nameserver to use, else will use the default one")
+	flag.StringVar(&nameServer, "nameserver", "", "Nameserver to use, else will use the default one")
 	singleDomain := flag.String("single", "", "Single domain to check / print out")
 	rebuildFile := flag.Bool("u", false, "if set, regenerate and update hostfile and update from generated checkSums")
 	addDefaultHostname := flag.Bool("defaults", false, "guess and add default subdomains")
@@ -66,7 +72,7 @@ func main() {
 
 	if nameServer != "" {
 		r = net.Resolver{
-			Dial: returnDialer,
+			Dial:     returnDialer,
 			PreferGo: true,
 		}
 	} else {
@@ -107,13 +113,13 @@ func main() {
 			fmt.Fprintf(file, "%s:%s:%s\n", v.zoneName, v.generatedCheckSum, v.includedSubs)
 		} else {
 			if *singleDomain != "" {
-				osExitMessage += fmt.Sprintf("Results zone %s calc: %s %s\n", v.zoneName, v.generatedCheckSum, v.zone)
+				osExitMessage += fmt.Sprintf("%d ZONE_%s - calc:%s\n", nagiosState["UNKNOWN"], v.zoneName, v.generatedCheckSum, v.zone)
 			} else {
 				if v.generatedCheckSum != v.expectedCheckSum {
-					osWarnMessage += fmt.Sprintf("Warning zone %s exp: %s calc: %s %s\n", v.zoneName, v.expectedCheckSum, v.generatedCheckSum, v.zone)
+					osWarnMessage += fmt.Sprintf("%d ZONE_%s - exp:%s calc: %s %s\n", nagiosState["WARNING"], v.zoneName, v.expectedCheckSum, v.generatedCheckSum, v.zone)
 					osExit = 1
 				} else {
-					osExitMessage += fmt.Sprintf("OK for zone %s %s %s\n", v.zoneName, v.expectedCheckSum, v.zone)
+					osExitMessage += fmt.Sprintf("%d ZONE_%s - calc:%s %s\n", nagiosState["OK"], v.zoneName, v.expectedCheckSum, v.zone)
 				}
 			}
 		}
@@ -129,17 +135,17 @@ func main() {
 	os.Exit(osExit)
 }
 
-func returnDialer(ctx context.Context, proto, server string ) (net.Conn, error) {
+func returnDialer(ctx context.Context, proto, server string) (net.Conn, error) {
 	d := net.Dialer{}
 	return d.DialContext(ctx, nameServerProto, nameServer+":53")
 }
 
-func checkZone(r net.Resolver, ctx context.Context, mainZone, checksum string, includeSubs string, dnsResults chan dnsResult, addDefaultHostnames bool)  {
+func checkZone(r net.Resolver, ctx context.Context, mainZone, checksum string, includeSubs string, dnsResults chan dnsResult, addDefaultHostnames bool) {
 	var subDomain = make(map[string]bool)
 	var zoneFile []string
 	h := sha1.New()
 
-	if ! strings.HasSuffix(mainZone,".") {
+	if !strings.HasSuffix(mainZone, ".") {
 		mainZone += "."
 	}
 
@@ -178,7 +184,7 @@ func checkZone(r net.Resolver, ctx context.Context, mainZone, checksum string, i
 			}
 		}
 
-		ns, err := r.LookupNS(ctx,zone)
+		ns, err := r.LookupNS(ctx, zone)
 		if err == nil {
 			for _, v := range ns {
 				zoneFile = append(zoneFile, "NS: "+v.Host)
@@ -192,7 +198,7 @@ func checkZone(r net.Resolver, ctx context.Context, mainZone, checksum string, i
 			}
 		}
 
-		txt, err := r.LookupTXT(ctx,zone)
+		txt, err := r.LookupTXT(ctx, zone)
 		if err == nil {
 			for _, v := range txt {
 				zoneFile = append(zoneFile, "TXT: "+v)
