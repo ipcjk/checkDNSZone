@@ -113,13 +113,13 @@ func main() {
 			fmt.Fprintf(file, "%s:%s:%s\n", v.zoneName, v.generatedCheckSum, v.includedSubs)
 		} else {
 			if *singleDomain != "" {
-				osExitMessage += fmt.Sprintf("%d ZONE_%s - calc:%s\n", nagiosState["UNKNOWN"], v.zoneName, v.generatedCheckSum, v.zone)
+				osExitMessage += fmt.Sprintf("%d ZONE_%s - calc:%s zone:%s\n", nagiosState["UNKNOWN"], v.zoneName, v.generatedCheckSum, v.zone)
 			} else {
 				if v.generatedCheckSum != v.expectedCheckSum {
-					osWarnMessage += fmt.Sprintf("%d ZONE_%s - exp:%s calc: %s %s\n", nagiosState["WARNING"], v.zoneName, v.expectedCheckSum, v.generatedCheckSum, v.zone)
+					osWarnMessage += fmt.Sprintf("%d ZONE_%s - exp:%s calc:%s zone:%s\n", nagiosState["WARNING"], v.zoneName, v.expectedCheckSum, v.generatedCheckSum, v.zone)
 					osExit = 1
 				} else {
-					osExitMessage += fmt.Sprintf("%d ZONE_%s - calc:%s %s\n", nagiosState["OK"], v.zoneName, v.expectedCheckSum, v.zone)
+					osExitMessage += fmt.Sprintf("%d ZONE_%s - calc:%s zone:%s\n", nagiosState["OK"], v.zoneName, v.expectedCheckSum, v.zone)
 				}
 			}
 		}
