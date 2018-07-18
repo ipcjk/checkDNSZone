@@ -47,8 +47,14 @@ func main() {
 	rebuildFile := flag.Bool("u", false, "if set, regenerate and update hostfile and update from generated checkSums")
 	addDefaultHostname := flag.Bool("defaults", false, "guess and add default subdomains")
 	printAll := flag.Bool("v", false, "print OK matches also")
+	version := flag.Bool("version", false, "print version and exit")
 
 	flag.Parse()
+
+	if *version {
+		log.Println("checkDNSZone version 0.1")
+		os.Exit(0)
+	}
 
 	if *hostFile == "" {
 		log.Fatal("Need an input file")
@@ -81,17 +87,22 @@ func main() {
 
 	for _, v := range zones {
 		z := strings.Split(v, ":")
+
+		if len(z) <= 1 {
+			continue
+		}
+
 		wg.Add(1)
 
 		go func() {
+			defer wg.Done()
 
-			if len(z) < 3 {
-				checkZone(r, ctx, z[0], z[1], "", dnsResults, *addDefaultHostname)
-			} else if len(z) == 3 {
-				checkZone(r, ctx, z[0], z[1], z[2], dnsResults, *addDefaultHostname)
+			var subs string
+			if len(z) >= 3 {
+				subs = z[2]
 			}
+			checkZone(r, ctx, z[0], z[1], subs, dnsResults, *addDefaultHostname)
 
-			wg.Done()
 		}()
 	}
 
@@ -113,13 +124,16 @@ func main() {
 			fmt.Fprintf(file, "%s:%s:%s\n", v.zoneName, v.generatedCheckSum, v.includedSubs)
 		} else {
 			if *singleDomain != "" {
-				osExitMessage += fmt.Sprintf("%d ZONE_%s - calc:%s zone:%s\n", nagiosState["UNKNOWN"], v.zoneName, v.generatedCheckSum, v.zone)
+				osExitMessage += fmt.Sprintf("%d ZONE_%s - calc:%s zone:%s\n",
+					nagiosState["UNKNOWN"], v.zoneName, v.generatedCheckSum, v.zone)
 			} else {
 				if v.generatedCheckSum != v.expectedCheckSum {
-					osWarnMessage += fmt.Sprintf("%d ZONE_%s - exp:%s calc:%s zone:%s\n", nagiosState["WARNING"], v.zoneName, v.expectedCheckSum, v.generatedCheckSum, v.zone)
+					osWarnMessage += fmt.Sprintf("%d ZONE_%s - exp:%s calc:%s zone:%s\n",
+						nagiosState["WARNING"], v.zoneName, v.expectedCheckSum, v.generatedCheckSum, v.zone)
 					osExit = 1
 				} else {
-					osExitMessage += fmt.Sprintf("%d ZONE_%s - calc:%s zone:%s\n", nagiosState["OK"], v.zoneName, v.expectedCheckSum, v.zone)
+					osExitMessage += fmt.Sprintf("%d ZONE_%s - calc:%s zone:%s\n",
+						nagiosState["OK"], v.zoneName, v.expectedCheckSum, v.zone)
 				}
 			}
 		}
@@ -140,7 +154,8 @@ func returnDialer(ctx context.Context, proto, server string) (net.Conn, error) {
 	return d.DialContext(ctx, nameServerProto, nameServer+":53")
 }
 
-func checkZone(r net.Resolver, ctx context.Context, mainZone, checksum string, includeSubs string, dnsResults chan dnsResult, addDefaultHostnames bool) {
+func checkZone(r net.Resolver, ctx context.Context, mainZone, checksum, includeSubs string,
+	dnsResults chan dnsResult, addDefaultHostnames bool) {
 	var subDomain = make(map[string]bool)
 	var zoneFile []string
 	h := sha1.New()
@@ -160,7 +175,7 @@ func checkZone(r net.Resolver, ctx context.Context, mainZone, checksum string, i
 		subDomain[v] = true
 	}
 
-	for k, _ := range subDomain {
+	for k := range subDomain {
 		zonesToCheck = append(zonesToCheck, k+"."+mainZone)
 	}
 
