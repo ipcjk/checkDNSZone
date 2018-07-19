@@ -33,17 +33,17 @@ checkDNSzone does not consider the SOA-origin record currently.
    
 ##### Example calls
 
-One shot, prints out the zone and the checksum
+Shot and print out the zone and the checksum
         
-    checkDNSZone -single golem.de
+    checkDNSZone -v
  
-One shot with custom nameserver (nameserver will be expanded to :53 and UDP protocol)
+Shot with custom nameserver (nameserver will be expanded to :53 and UDP protocol)
         
-    checkDNSZone -single golem.de -nameserver 8.8.8.8
+    checkDNSZone -nameserver 8.8.8.8
    
-Run on the input hostfile and update the checkSum vales, print out zones with a checksum error.
+Run on the input hostfile and update the checkSum values, print out zones with a checksum error.
 
-    checkDNSZone -x 
+    checkDNSZone -u 
     
 Run on the input hostfile and print out all zones, either with an error or not.
 
