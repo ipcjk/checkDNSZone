@@ -1,5 +1,7 @@
 package main
 
+/* checkDNSZone, MIT license Copyright Jörg Kost jk@ip-clear.de */
+
 import (
 	"bufio"
 	"context"
@@ -101,7 +103,7 @@ func main() {
 
 		/* do we need to re-generate the input file later? */
 		if *updateFile {
-			fileOutput = append(fileOutput, fmt.Sprintf("%s:%s:%s", v.name, toExpects[v.name], zoneSubsIncl[v.name]))
+			fileOutput = append(fileOutput, fmt.Sprintf("%s:%s:%s", v.name, v.sum, zoneSubsIncl[v.name]))
 		}
 
 	}

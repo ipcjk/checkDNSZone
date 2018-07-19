@@ -33,10 +33,10 @@ checkDNSzone does not consider the SOA-origin record currently.
    
 ##### Example calls
 
-Shot and print out the zone and the checksum
-        
+Run on the input hostfile and print out all zones, either with an error or not.
+
     checkDNSZone -v
- 
+    
 Shot with custom nameserver (nameserver will be expanded to :53 and UDP protocol)
         
     checkDNSZone -nameserver 8.8.8.8
@@ -45,7 +45,4 @@ Run on the input hostfile and update the checkSum values, print out zones with a
 
     checkDNSZone -u 
     
-Run on the input hostfile and print out all zones, either with an error or not.
 
-    checkDNSZone -v
-    
