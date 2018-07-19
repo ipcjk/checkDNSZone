@@ -273,13 +273,13 @@ func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, 
 			z[2] += "," + defaultHostnames
 		}
 
-		/* Split all subdomains and build a map for uniqueness */
+		/* split all subdomains and build a map for uniqueness */
 		subDomains := strings.Split(z[2], ",")
 		for _, v := range subDomains {
 			subDomain[v] = true
 		}
 
-		/* Add sub domains */
+		/* add sub domains */
 		for k := range subDomain {
 			zoneToChecks[z[0]] = append(zoneToChecks[z[0]], k+"."+z[0])
 		}
@@ -290,7 +290,7 @@ func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, 
 		/* sort slice, else the results will be randomized */
 		sort.Strings(zoneToChecks[z[0]])
 
-		/* Add main zone in the beginning as first element */
+		/* add main zone in the beginning as first element */
 		zoneToChecks[z[0]] = append([]string{z[0]}, zoneToChecks[z[0]]...)
 
 		/* jump back to scanner loop */
