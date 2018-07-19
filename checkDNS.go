@@ -41,7 +41,7 @@ func main() {
 	var fileOutput []string
 
 	/* Command line parameter */
-	hostFile := flag.String("hostfile", "hosts.hm", "Zones to check")
+	hostFile := flag.String("hostfile", "checkDNShosts", "Zones to check")
 	nameserver := flag.String("nameserver", "", "Nameserver to use, else will use the default one")
 	addDefaultHostname := flag.Bool("defaults", false, "guess and add default subdomains")
 	updateFile := flag.Bool("u", false, "update host file")
