@@ -35,7 +35,7 @@ checkDNSzone does not consider the SOA-origin record currently.
 
 Run on the input hostfile and print out all zones, either with an error or not.
 
-    checkDNSZone -v
+    checkDNSZone
     
 Shot with custom nameserver (nameserver will be expanded to :53 and UDP protocol)
         

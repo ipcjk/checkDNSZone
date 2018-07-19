@@ -38,20 +38,20 @@ func main() {
 	var err error
 	var wg sync.WaitGroup
 	var osExit int
-	var exitMsg, warnMsg string
+	var exitMsg string
 	var results = make(chan zoneResult)
 	var fileOutput []string
 
 	/* Command line parameter */
 	hostFile := flag.String("hostfile", "checkDNShosts", "Zones to check")
 	nameserver := flag.String("nameserver", "", "Nameserver to use, else will use the default one")
-	addDefaultHostname := flag.Bool("defaults", false, "guess and add default subdomains")
+	addDefaultSubDomains := flag.Bool("defaults", false, "guess and add default subdomains")
 	updateFile := flag.Bool("u", false, "update host file")
-	printAll := flag.Bool("v", false, "print OK matches also")
 
 	/* parse cli parameter */
 	flag.Parse()
 
+	/* exit early if there is no input host file */
 	if *hostFile == "" {
 		log.Fatal("Need an input file")
 	}
@@ -66,7 +66,7 @@ func main() {
 	zonesToExpect => map of strings of []string with the mainzone as key, containing the parsed zones including subdomains
 	toExpects => map of strings with the mainzone as key containing the expected chechsum result
 	*/
-	zonesToExpect, toExpects, zoneSubsIncl := parseHostFile(file, *addDefaultHostname)
+	zonesToExpect, toExpects, zoneSubsIncl := parseHostFile(file, *addDefaultSubDomains)
 
 	/* clean up file handle */
 	file.Close()
@@ -93,7 +93,7 @@ func main() {
 	for v := range results {
 
 		if v.sum != toExpects[v.name] {
-			warnMsg += fmt.Sprintf("%d ZONE_%s - exp:%s calc:%s zone:%s\n",
+			exitMsg += fmt.Sprintf("%d ZONE_%s - exp:%s calc:%s zone:%s\n",
 				states["WARNING"], v.name, toExpects[v.name], v.sum, v.zone)
 			osExit = 1
 		} else {
@@ -101,28 +101,22 @@ func main() {
 				states["OK"], v.name, toExpects[v.name], v.zone)
 		}
 
-		/* do we need to re-generate the input file later? */
+		/* do we need to re-generate the input file later?  then save some data for later */
 		if *updateFile {
 			fileOutput = append(fileOutput, fmt.Sprintf("%s:%s:%s", v.name, v.sum, zoneSubsIncl[v.name]))
 		}
 
 	}
 
-	/* different exit handling */
-	if osExit == 1 {
-		fmt.Println(warnMsg)
-	}
-
 	/* print all collected output, even the OK strings */
-	if *printAll {
-		fmt.Print(exitMsg)
-	}
+	fmt.Print(exitMsg)
 
 	/* update file if necessary */
 	if *updateFile {
 
 		/* TODO, if something failed, e.g. dns lookup, dont write a new file? */
 
+		/* open the hostfile for writing or exit early */
 		file, err := os.OpenFile(*hostFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatalf("Update file error: %s", err)
@@ -252,7 +246,7 @@ func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, 
 	/* loop over "csv" content */
 	for scanner.Scan() {
 
-		/* build a true table for subdomains */
+		/* build a truth table for subdomains */
 		var subDomain = make(map[string]bool)
 		z := strings.Split(scanner.Text(), ":")
 
@@ -285,9 +279,6 @@ func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, 
 			subDomain[v] = true
 		}
 
-		/* Add main zone */
-		zoneToChecks[z[0]] = append(zoneToChecks[z[0]], z[0])
-
 		/* Add sub domains */
 		for k := range subDomain {
 			zoneToChecks[z[0]] = append(zoneToChecks[z[0]], k+"."+z[0])
@@ -299,8 +290,9 @@ func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, 
 		/* sort slice, else the results will be randomized */
 		sort.Strings(zoneToChecks[z[0]])
 
-		/* Add main zone in the beginning */
+		/* Add main zone in the beginning as first element */
 		zoneToChecks[z[0]] = append([]string{z[0]}, zoneToChecks[z[0]]...)
+
 		/* jump back to scanner loop */
 	}
 
