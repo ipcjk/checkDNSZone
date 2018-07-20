@@ -1,3 +1,6 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/ipcjk/checkDNSZone)](https://goreportcard.com/report/github.com/ipcjk/checkDNSZone)
+[![Build Status](https://travis-ci.org/ipcjk/checkDNSZone.svg?branch=master)](https://travis-ci.org/ipcjk/checkDNSZone)
+
 #### checkDNSZone
 
 A small program to continously do DNS requests for zones from an input file and 
