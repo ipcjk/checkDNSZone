@@ -10,11 +10,11 @@ func TestHostParse(t *testing.T) {
 	zones := strings.NewReader(
 		`
 golem.de:32670b5b64b12c9c80f2fab02cd5eed2b8bb01c9:
-heise.de:nichtsda:www
-google.com:anything:all,everybody,www
+heise.de:nichtsda::www
+google.com:anything::all,everybody,www
 `)
 
-	zonesToExpect, toExpects, zoneSubsIncl := parseHostFile(zones, false)
+	zonesToExpect, toExpects, zoneSubsIncl, _ := parseHostFile(zones, false)
 
 	if len(zonesToExpect) != 3 {
 		t.Error("Too less zones in parsed file")

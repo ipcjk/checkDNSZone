@@ -44,7 +44,7 @@ func main() {
 
 	/* Command line parameter */
 	hostFile := flag.String("hostfile", "checkDNShosts", "Zones to check")
-	nameserver := flag.String("nameserver", "", "Nameserver to use, else will use the default one")
+	nameserver := flag.String("nameserver", "", "Nameserver to use, else will use the configured one in the row, else the default one")
 	addDefaultSubDomains := flag.Bool("defaults", false, "guess and add default subdomains")
 	updateFile := flag.Bool("u", false, "update host file")
 
@@ -66,7 +66,7 @@ func main() {
 	zonesToExpect => map of strings of []string with the mainzone as key, containing the parsed zones including subdomains
 	toExpects => map of strings with the mainzone as key containing the expected chechsum result
 	*/
-	zonesToExpect, toExpects, zoneSubsIncl := parseHostFile(file, *addDefaultSubDomains)
+	zonesToExpect, toExpects, zoneSubsIncl, nameServerToUse := parseHostFile(file, *addDefaultSubDomains)
 
 	/* clean up file handle */
 	file.Close()
@@ -78,7 +78,11 @@ func main() {
 		go func(index string) {
 
 			defer wg.Done()
-			checkZone(*nameserver, zonesToExpect[index], results)
+			if nameServerToUse[index] != "" {
+				checkZone(nameServerToUse[index], zonesToExpect[index], results)
+			} else {
+				checkZone(*nameserver, zonesToExpect[index], results)
+			}
 
 		}(e)
 	}
@@ -235,11 +239,12 @@ func checkZone(nameServer string, zoneContent []string, dnsResults chan zoneResu
 /* parseHostfile
 reads out our hostfile row by row, easier than including a full csv parser
 */
-func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, map[string]string, map[string]string) {
+func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, map[string]string, map[string]string, map[string]string) {
 	/* our named return maps */
 	zoneToChecks := map[string][]string{}
 	checksumToExpect := map[string]string{}
 	zoneSubsIncl := map[string]string{}
+	nameServerToUse := map[string]string{}
 
 	scanner := bufio.NewScanner(r)
 
@@ -261,20 +266,20 @@ func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, 
 		}
 
 		/* Too less input, then add a slice entry */
-		if len(z) == 2 {
-			z = append(z, "")
+		if len(z) == 2 || len(z) == 3 {
+			z = append(z, []string{"",""}...)
 		}
 
 		/* save our original list of subdomains */
-		zoneSubsIncl[z[0]] = z[2]
+		zoneSubsIncl[z[0]] = z[3]
 
 		/* Add magic default subDomains */
 		if addDefaultHostnames {
-			z[2] += "," + defaultHostnames
+			z[3] += "," + defaultHostnames
 		}
 
 		/* split all subdomains and build a map for uniqueness */
-		subDomains := strings.Split(z[2], ",")
+		subDomains := strings.Split(z[3], ",")
 		for _, v := range subDomains {
 			subDomain[v] = true
 		}
@@ -293,8 +298,12 @@ func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, 
 		/* add main zone in the beginning as first element */
 		zoneToChecks[z[0]] = append([]string{z[0]}, zoneToChecks[z[0]]...)
 
+		/* save nameserver - if an */
+		if z[2] != "" {
+			nameServerToUse[z[0]] = z[2]
+		}
 		/* jump back to scanner loop */
 	}
 
-	return zoneToChecks, checksumToExpect, zoneSubsIncl
+	return zoneToChecks, checksumToExpect, zoneSubsIncl, nameServerToUse
 }
