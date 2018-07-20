@@ -41,10 +41,11 @@ func main() {
 	var exitMsg string
 	var results = make(chan zoneResult)
 	var fileOutput []string
+	var workers = make(chan struct{}, 100)
 
 	/* Command line parameter */
 	hostFile := flag.String("hostfile", "checkDNShosts", "Zones to check")
-	nameserver := flag.String("nameserver", "", "Nameserver to use, else will use the configured one in the row, else the default one")
+	nameserver := flag.String("nameserver", "", "Nameserver to use, else will use the default one")
 	addDefaultSubDomains := flag.Bool("defaults", false, "guess and add default subdomains")
 	updateFile := flag.Bool("u", false, "update host file")
 
@@ -72,18 +73,18 @@ func main() {
 	file.Close()
 
 	/* loop over the parsed zones and run a dns zone lookup for each */
-	/* todo, maybe force a fixed upper limit on parallel go routines */
 	for e := range zonesToExpect {
+
 		wg.Add(1)
 		go func(index string) {
-
+			workers <- struct{}{}
 			defer wg.Done()
 			if nameServerToUse[index] != "" {
 				checkZone(nameServerToUse[index], zonesToExpect[index], results)
 			} else {
 				checkZone(*nameserver, zonesToExpect[index], results)
 			}
-
+			<-workers
 		}(e)
 	}
 
@@ -267,7 +268,7 @@ func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, 
 
 		/* Too less input, then add a slice entry */
 		if len(z) == 2 || len(z) == 3 {
-			z = append(z, []string{"",""}...)
+			z = append(z, []string{"", ""}...)
 		}
 
 		/* save our original list of subdomains */
@@ -298,10 +299,9 @@ func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, 
 		/* add main zone in the beginning as first element */
 		zoneToChecks[z[0]] = append([]string{z[0]}, zoneToChecks[z[0]]...)
 
-		/* save nameserver - if an */
-		if z[2] != "" {
-			nameServerToUse[z[0]] = z[2]
-		}
+		/* save nameserver to use, if any */
+		nameServerToUse[z[0]] = z[2]
+
 		/* jump back to scanner loop */
 	}
 
