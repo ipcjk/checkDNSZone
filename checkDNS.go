@@ -41,16 +41,18 @@ func main() {
 	var exitMsg string
 	var results = make(chan zoneResult)
 	var fileOutput []string
-	var workers = make(chan struct{}, 100)
 
 	/* Command line parameter */
 	hostFile := flag.String("hostfile", "checkDNShosts", "Zones to check")
 	nameserver := flag.String("nameserver", "", "Nameserver to use, else will use the default one")
 	addDefaultSubDomains := flag.Bool("defaults", false, "guess and add default subdomains")
 	updateFile := flag.Bool("u", false, "update host file")
+	workerNum := flag.Int("workers", 100, "number of go routines for parallel execution")
 
 	/* parse cli parameter */
 	flag.Parse()
+
+	workers := make(chan struct{}, *workerNum)
 
 	/* exit early if there is no input host file */
 	if *hostFile == "" {
