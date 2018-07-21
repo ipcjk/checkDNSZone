@@ -112,7 +112,7 @@ func main() {
 
 		/* do we need to re-generate the input file later?  then save some data for later */
 		if *updateFile {
-			fileOutput = append(fileOutput, fmt.Sprintf("%s:%s:%s", v.name, v.sum, zoneSubsIncl[v.name]))
+			fileOutput = append(fileOutput, fmt.Sprintf("%s:%s:%s:%s", v.name, v.sum, nameServerToUse[v.name], zoneSubsIncl[v.name]))
 		}
 
 	}
@@ -175,7 +175,7 @@ func checkZone(nameServer string, zoneContent []string, dnsResults chan zoneResu
 			cname, addrs, err := r.LookupSRV(ctx, "", "", zone)
 			if err == nil {
 				for _, v := range addrs {
-					zoneFile = append(zoneFile, fmt.Sprintf("SRV: %s %s %d %d %d", cname, v.Target, v.Port, v.Priority, v.Weight))
+					zoneFile = append(zoneFile, fmt.Sprintf("%s: SRV: %s %s %d %d %d", zone, cname, v.Target, v.Port, v.Priority, v.Weight))
 				}
 			}
 			continue
@@ -185,7 +185,7 @@ func checkZone(nameServer string, zoneContent []string, dnsResults chan zoneResu
 		mx, err := r.LookupMX(ctx, zone)
 		if err == nil {
 			for _, v := range mx {
-				zoneFile = append(zoneFile, fmt.Sprintf("MX: %s %d ", v.Host, v.Pref))
+				zoneFile = append(zoneFile, fmt.Sprintf("%s: MX: %s %d ", zone, v.Host, v.Pref))
 			}
 		}
 
@@ -193,7 +193,7 @@ func checkZone(nameServer string, zoneContent []string, dnsResults chan zoneResu
 		ns, err := r.LookupNS(ctx, zone)
 		if err == nil {
 			for _, v := range ns {
-				zoneFile = append(zoneFile, "NS: "+v.Host)
+				zoneFile = append(zoneFile, zone+": NS: "+v.Host)
 			}
 		}
 
@@ -201,7 +201,7 @@ func checkZone(nameServer string, zoneContent []string, dnsResults chan zoneResu
 		ip, err := r.LookupHost(ctx, zone)
 		if err == nil {
 			for _, v := range ip {
-				zoneFile = append(zoneFile, "IP: "+v)
+				zoneFile = append(zoneFile, zone+": IP: "+v)
 			}
 		}
 
@@ -209,14 +209,14 @@ func checkZone(nameServer string, zoneContent []string, dnsResults chan zoneResu
 		txt, err := r.LookupTXT(ctx, zone)
 		if err == nil {
 			for _, v := range txt {
-				zoneFile = append(zoneFile, "TXT: "+v)
+				zoneFile = append(zoneFile, zone+": TXT: "+v)
 			}
 		}
 
 		/* cnames */
 		cname, err := r.LookupCNAME(ctx, zone)
 		if err == nil {
-			zoneFile = append(zoneFile, "CNAME: "+cname)
+			zoneFile = append(zoneFile, zone+": CNAME: "+cname)
 		}
 
 		/* mandatory:
@@ -230,7 +230,7 @@ func checkZone(nameServer string, zoneContent []string, dnsResults chan zoneResu
 		}
 	}
 
-	/* calculate checksum and printout in hex letters */
+	/* calculate checksum of all and printout in hex letters */
 	generatedCheckSum := fmt.Sprintf("%x", h.Sum(nil))
 
 	/* send result back over channel */
@@ -286,7 +286,9 @@ func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, 
 		/* split all subdomains and build a map for uniqueness */
 		subDomains := strings.Split(z[3], ",")
 		for _, v := range subDomains {
-			subDomain[v] = true
+			if v != "" {
+				subDomain[v] = true
+			}
 		}
 
 		/* add sub domains */
