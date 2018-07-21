@@ -68,6 +68,8 @@ func main() {
 	/* parse hostfile and return two values
 	zonesToExpect => map of strings of []string with the mainzone as key, containing the parsed zones including subdomains
 	toExpects => map of strings with the mainzone as key containing the expected chechsum result
+	zoneSubsIncl => map of strings with the mainzone as key containing the subdomain list from the CSV (not mand)
+	nameServerToUse => map of string with mainzone as key containing the dns server to ask (not mand)
 	*/
 	zonesToExpect, toExpects, zoneSubsIncl, nameServerToUse := parseHostFile(file, *addDefaultSubDomains)
 

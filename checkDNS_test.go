@@ -10,11 +10,11 @@ func TestHostParse(t *testing.T) {
 	zones := strings.NewReader(
 		`
 golem.de:32670b5b64b12c9c80f2fab02cd5eed2b8bb01c9:
-heise.de:nichtsda::www
+heise.de:nichtsda:212.19.48.14:www
 google.com:anything::all,everybody,www
 `)
 
-	zonesToExpect, toExpects, zoneSubsIncl, _ := parseHostFile(zones, false)
+	zonesToExpect, toExpects, zoneSubsIncl, nameServerToUse := parseHostFile(zones, false)
 
 	if len(zonesToExpect) != 3 {
 		t.Error("Too less zones in parsed file")
@@ -50,6 +50,10 @@ google.com:anything::all,everybody,www
 
 	if zonesToExpect["google.com."][3] != "www.google.com." {
 		t.Error("www.google.com. is not fourth entry in the google.com. slice")
+	}
+
+	if nameServerToUse["heise.de."] != "212.19.48.14" {
+		t.Error("Wrong NS for heise.de")
 	}
 
 }
