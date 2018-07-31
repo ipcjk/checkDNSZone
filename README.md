@@ -7,6 +7,10 @@ A small program to continously do DNS requests for zones from an input file and
 compare the returned data to a SHA1 checksum that has been calculcated before. Easy to install in a 
 monitoring system like Icinga or Nagios. 
 
+
+#### Example checkMK 
+![jpg](https://raw.githubusercontent.com/ipcjk/staticpage/master/golem_dns.jpeg)
+
 ##### input file
 
 checkDNSZone takes a file with colon-seperated data values. A new line represents 
