@@ -52,6 +52,7 @@ func main() {
 	/* parse cli parameter */
 	flag.Parse()
 
+	/* channel to limit concurrent lookups */
 	workers := make(chan struct{}, *workerNum)
 
 	/* exit early if there is no input host file */
@@ -78,7 +79,6 @@ func main() {
 
 	/* loop over the parsed zones and run a dns zone lookup for each */
 	for e := range zonesToExpect {
-
 		wg.Add(1)
 		go func(index string) {
 			workers <- struct{}{}
@@ -101,6 +101,7 @@ func main() {
 	/* read out the channel and print output to stdout */
 	for v := range results {
 
+		/* if new calculated checkum does not equal the expected one, give out a warning */
 		if v.sum != toExpects[v.name] {
 			exitMsg += fmt.Sprintf("%d ZONE_%s - exp:%s calc:%s zone:%s\n",
 				states["WARNING"], v.name, toExpects[v.name], v.sum, v.zone)
@@ -140,6 +141,8 @@ func main() {
 		file.Close()
 
 	}
+
+	/* exit with nagios compatible exit code */
 	os.Exit(osExit)
 }
 
@@ -251,6 +254,7 @@ func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, 
 	zoneSubsIncl := map[string]string{}
 	nameServerToUse := map[string]string{}
 
+	/* scanner for reading the input reader line by line */
 	scanner := bufio.NewScanner(r)
 
 	/* loop over "csv" content */
@@ -286,6 +290,7 @@ func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, 
 		/* split all subdomains and build a map for uniqueness */
 		subDomains := strings.Split(z[3], ",")
 		for _, v := range subDomains {
+			/* do not add the empty element */
 			if v != "" {
 				subDomain[v] = true
 			}
