@@ -17,7 +17,9 @@ import (
 	"sync"
 )
 
-/* zoneResult is the expected structure for
+/*
+	zoneResult is the expected structure for
+
 returning results over our go - channel after a successful lookup
 */
 type zoneResult struct {
@@ -48,6 +50,7 @@ func main() {
 	addDefaultSubDomains := flag.Bool("defaults", false, "guess and add default subdomains")
 	updateFile := flag.Bool("u", false, "update host file")
 	workerNum := flag.Int("workers", 100, "number of go routines for parallel execution")
+	verbose := flag.Bool("v", false, "verbose output")
 
 	/* parse cli parameter */
 	flag.Parse()
@@ -84,9 +87,10 @@ func main() {
 			workers <- struct{}{}
 			defer wg.Done()
 			if nameServerToUse[index] != "" {
-				checkZone(nameServerToUse[index], zonesToExpect[index], results)
+				log.Println(nameServerToUse[index])
+				checkZone(nameServerToUse[index], zonesToExpect[index], results, *verbose)
 			} else {
-				checkZone(*nameserver, zonesToExpect[index], results)
+				checkZone(*nameserver, zonesToExpect[index], results, *verbose)
 			}
 			<-workers
 		}(e)
@@ -100,7 +104,6 @@ func main() {
 
 	/* read out the channel and print output to stdout */
 	for v := range results {
-
 		/* if new calculated checkum does not equal the expected one, give out a warning */
 		if v.sum != toExpects[v.name] {
 			exitMsg += fmt.Sprintf("%d ZONE_%s - exp:%s calc:%s zone:%s\n",
@@ -150,7 +153,7 @@ func main() {
 CheckZone is called with an optional nameServer argument, a list of zones to lookup and
 a channel to return the results
 */
-func checkZone(nameServer string, zoneContent []string, dnsResults chan zoneResult) {
+func checkZone(nameServer string, zoneContent []string, dnsResults chan zoneResult, verbose bool) {
 	var zoneFile []string
 	var r net.Resolver
 
@@ -163,6 +166,9 @@ func checkZone(nameServer string, zoneContent []string, dnsResults chan zoneResu
 	/* create a resolver with a user nameserver as a dialer */
 	if nameServer != "" {
 		dialer := func(ctx context.Context, _, _ string) (net.Conn, error) {
+			if verbose {
+				log.Println("Using nameserver:", nameServer)
+			}
 			d := net.Dialer{}
 			return d.DialContext(ctx, "udp", nameServer+":53")
 		}
@@ -244,7 +250,9 @@ func checkZone(nameServer string, zoneContent []string, dnsResults chan zoneResu
 
 }
 
-/* parseHostfile
+/*
+	parseHostfile
+
 reads out our hostfile row by row, easier than including a full csv parser
 */
 func parseHostFile(r io.Reader, addDefaultHostnames bool) (map[string][]string, map[string]string, map[string]string, map[string]string) {
